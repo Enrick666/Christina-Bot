@@ -1,7 +1,6 @@
 import { downloadMediaMessage } from '@whiskeysockets/baileys';
 import { Sticker, StickerTypes } from 'wa-sticker-formatter';
 import ffmpegPath from 'ffmpeg-static';
-import ffmpeg from 'fluent-ffmpeg';
 import { exec } from 'child_process';
 import util from 'util';
 import path from 'path';
@@ -12,7 +11,6 @@ import { Document, Packer, Paragraph, TextRun, ImageRun } from 'docx';
 
 const execPromise = util.promisify(exec);
 process.env.FFMPEG_PATH = ffmpegPath;
-ffmpeg.setFfmpegPath(ffmpegPath);
 
 export const react = async (sock, msg, emoji) => {
     try {
@@ -187,22 +185,19 @@ export const handleToolsCommands = async (sock, msg, remoteJid, command, args) =
 
                 fs.writeFileSync(tempWebpPath, buffer);
 
-                ffmpeg(tempWebpPath)
-                    .toFormat('jpg')
-                    .save(tempJpgPath)
-                    .on('end', async () => {
-                        const imgBuffer = fs.readFileSync(tempJpgPath);
-                        await sock.sendMessage(remoteJid, { image: imgBuffer, caption: '✅ *Sticker converti en image !*' }, { quoted: msg });
-                        await react(sock, msg, '✅');
+                try {
+                    await execPromise(`"${ffmpegPath}" -y -i "${tempWebpPath}" "${tempJpgPath}"`);
+                    const imgBuffer = fs.readFileSync(tempJpgPath);
+                    await sock.sendMessage(remoteJid, { image: imgBuffer, caption: '✅ *Sticker converti en image !*' }, { quoted: msg });
+                    await react(sock, msg, '✅');
 
-                        if (fs.existsSync(tempWebpPath)) fs.unlinkSync(tempWebpPath);
-                        if (fs.existsSync(tempJpgPath)) fs.unlinkSync(tempJpgPath);
-                    })
-                    .on('error', async (err) => {
-                        console.error('Erreur conversion toimg:', err);
-                        await react(sock, msg, '❌');
-                        if (fs.existsSync(tempWebpPath)) fs.unlinkSync(tempWebpPath);
-                    });
+                    if (fs.existsSync(tempWebpPath)) fs.unlinkSync(tempWebpPath);
+                    if (fs.existsSync(tempJpgPath)) fs.unlinkSync(tempJpgPath);
+                } catch (err) {
+                    console.error('Erreur conversion toimg:', err);
+                    await react(sock, msg, '❌');
+                    if (fs.existsSync(tempWebpPath)) fs.unlinkSync(tempWebpPath);
+                }
 
             } catch (error) {
                 console.error('Erreur toimg:', error);
@@ -233,27 +228,22 @@ export const handleToolsCommands = async (sock, msg, remoteJid, command, args) =
 
                 fs.writeFileSync(tempInputPath, buffer);
 
-                ffmpeg(tempInputPath)
-                    .audioCodec('libmp3lame')
-                    .audioBitrate('128k')
-                    .toFormat('mp3')
-                    .save(tempAudioPath)
-                    .on('end', async () => {
-                        const mp3Buffer = fs.readFileSync(tempAudioPath);
-                        await sock.sendMessage(remoteJid, { 
-                            audio: mp3Buffer, 
-                            mimetype: 'audio/mpeg'
-                        }, { quoted: msg });
+                try {
+                    await execPromise(`"${ffmpegPath}" -y -i "${tempInputPath}" -acodec libmp3lame -ab 128k -f mp3 "${tempAudioPath}"`);
+                    const mp3Buffer = fs.readFileSync(tempAudioPath);
+                    await sock.sendMessage(remoteJid, { 
+                        audio: mp3Buffer, 
+                        mimetype: 'audio/mpeg'
+                    }, { quoted: msg });
 
-                        await react(sock, msg, '✅');
-                        if (fs.existsSync(tempInputPath)) fs.unlinkSync(tempInputPath);
-                        if (fs.existsSync(tempAudioPath)) fs.unlinkSync(tempAudioPath);
-                    })
-                    .on('error', async (err) => {
-                        console.error('Erreur conversion tomp3:', err);
-                        await react(sock, msg, '❌');
-                        if (fs.existsSync(tempInputPath)) fs.unlinkSync(tempInputPath);
-                    });
+                    await react(sock, msg, '✅');
+                    if (fs.existsSync(tempInputPath)) fs.unlinkSync(tempInputPath);
+                    if (fs.existsSync(tempAudioPath)) fs.unlinkSync(tempAudioPath);
+                } catch (err) {
+                    console.error('Erreur conversion tomp3:', err);
+                    await react(sock, msg, '❌');
+                    if (fs.existsSync(tempInputPath)) fs.unlinkSync(tempInputPath);
+                }
 
             } catch (error) {
                 console.error('Erreur tomp3:', error);
@@ -284,29 +274,23 @@ export const handleToolsCommands = async (sock, msg, remoteJid, command, args) =
                 fs.writeFileSync(tempInputPath, buffer);
 
                 // Paramètres optimisés spécifiquement pour la lecture de note vocale WhatsApp
-                ffmpeg(tempInputPath)
-                    .audioCodec('libopus')
-                    .audioChannels(1)
-                    .audioFrequency(48000)
-                    .toFormat('opus')
-                    .save(tempOpusPath)
-                    .on('end', async () => {
-                        const opusBuffer = fs.readFileSync(tempOpusPath);
-                        await sock.sendMessage(remoteJid, { 
-                            audio: opusBuffer, 
-                            mimetype: 'audio/ogg; codecs=opus', 
-                            ptt: true 
-                        }, { quoted: msg });
+                try {
+                    await execPromise(`"${ffmpegPath}" -y -i "${tempInputPath}" -acodec libopus -ac 1 -ar 48000 -f opus "${tempOpusPath}"`);
+                    const opusBuffer = fs.readFileSync(tempOpusPath);
+                    await sock.sendMessage(remoteJid, { 
+                        audio: opusBuffer, 
+                        mimetype: 'audio/ogg; codecs=opus', 
+                        ptt: true 
+                    }, { quoted: msg });
 
-                        await react(sock, msg, '✅');
-                        if (fs.existsSync(tempInputPath)) fs.unlinkSync(tempInputPath);
-                        if (fs.existsSync(tempOpusPath)) fs.unlinkSync(tempOpusPath);
-                    })
-                    .on('error', async (err) => {
-                        console.error('Erreur conversion tovn:', err);
-                        await react(sock, msg, '❌');
-                        if (fs.existsSync(tempInputPath)) fs.unlinkSync(tempInputPath);
-                    });
+                    await react(sock, msg, '✅');
+                    if (fs.existsSync(tempInputPath)) fs.unlinkSync(tempInputPath);
+                    if (fs.existsSync(tempOpusPath)) fs.unlinkSync(tempOpusPath);
+                } catch (err) {
+                    console.error('Erreur conversion tovn:', err);
+                    await react(sock, msg, '❌');
+                    if (fs.existsSync(tempInputPath)) fs.unlinkSync(tempInputPath);
+                }
 
             } catch (error) {
                 console.error('Erreur tovn:', error);
