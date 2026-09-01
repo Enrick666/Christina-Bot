@@ -16,6 +16,10 @@ import { handleGroupCommands } from './src/commands/group.js';
 const PREFIX = '.';
 const msgRetryCounterCache = new NodeCache();
 
+// ⚠️ REMPLACE CE NUMÉRO PAR TON NUMÉRO WHATSAPP (AVEC INDICATIF SANS LE +)
+const PHONE_NUMBER = "24177000000"; 
+const USE_PAIRING_CODE = true; // Passe à false si tu veux revenir au QR Code
+
 // Dossier de stockage local sur l'hébergeur pour l'Anti-Delete
 const DELETED_DIR = './deleted_messages';
 if (!fs.existsSync(DELETED_DIR)) fs.mkdirSync(DELETED_DIR, { recursive: true });
@@ -111,7 +115,7 @@ async function startChristina() {
     
     const sock = makeWASocket({
         logger: pino({ level: 'silent' }),
-        printQRInTerminal: false,
+        printQRInTerminal: !USE_PAIRING_CODE,
         auth: state,
         browser: ['Mac OS', 'Chrome', '120.0.0.0'],
         syncFullHistory: false,
@@ -125,13 +129,24 @@ async function startChristina() {
         }
     });
 
+    // Génération du Pairing Code si le compte n'est pas encore lié
+    if (USE_PAIRING_CODE && !sock.authState.creds.registered) {
+        setTimeout(async () => {
+            let code = await sock.requestPairingCode(PHONE_NUMBER.trim());
+            code = code?.match(/.{1,4}/g)?.join("-") || code;
+            console.log(chalk.black.bgGreen(`\n========================================`));
+            console.log(chalk.black.bgGreen(` VOTRE CODE DE CONNEXION : ${code} `));
+            console.log(chalk.black.bgGreen(`========================================\n`));
+        }, 3000);
+    }
+
     customStore.bind(sock.ev);
     sock.ev.on('creds.update', saveCreds);
 
     sock.ev.on('connection.update', (update) => {
         const { connection, lastDisconnect, qr } = update;
         
-        if (qr) {
+        if (qr && !USE_PAIRING_CODE) {
             console.log(chalk.cyan('\n=== SCANNE CE QR CODE AVEC WHATSAPP ===\n'));
             qrcode.generate(qr, { small: true });
         }
