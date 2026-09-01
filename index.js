@@ -16,9 +16,9 @@ import { handleGroupCommands } from './src/commands/group.js';
 const PREFIX = '.';
 const msgRetryCounterCache = new NodeCache();
 
-// ⚠️ REMPLACE CE NUMÉRO PAR TON NUMÉRO WHATSAPP (AVEC INDICATIF SANS LE +)
+// ⚠️ REMPLACE CE NUMÉRO PAR TON VRAI NUMÉRO WHATSAPP (SANS LE + ET SANS ESPACES, EX: "24177XXXXXX")
 const PHONE_NUMBER = "24177000000"; 
-const USE_PAIRING_CODE = true; // Passe à false si tu veux revenir au QR Code
+const USE_PAIRING_CODE = true; // Passe à false si tu souhaites revenir au QR Code
 
 // Dossier de stockage local sur l'hébergeur pour l'Anti-Delete
 const DELETED_DIR = './deleted_messages';
@@ -117,7 +117,8 @@ async function startChristina() {
         logger: pino({ level: 'silent' }),
         printQRInTerminal: !USE_PAIRING_CODE,
         auth: state,
-        browser: ['Mac OS', 'Chrome', '120.0.0.0'],
+        // Signature d'agent mise à jour pour contourner les rejets de code par WhatsApp
+        browser: ['Ubuntu', 'Chrome', '20.0.0.0'],
         syncFullHistory: false,
         markOnlineOnConnect: true,
         msgRetryCounterCache,
@@ -131,13 +132,17 @@ async function startChristina() {
 
     // Génération du Pairing Code si le compte n'est pas encore lié
     if (USE_PAIRING_CODE && !sock.authState.creds.registered) {
-        setTimeout(async () => {
-            let code = await sock.requestPairingCode(PHONE_NUMBER.trim());
-            code = code?.match(/.{1,4}/g)?.join("-") || code;
-            console.log(chalk.black.bgGreen(`\n========================================`));
-            console.log(chalk.black.bgGreen(` VOTRE CODE DE CONNEXION : ${code} `));
-            console.log(chalk.black.bgGreen(`========================================\n`));
-        }, 3000);
+        if (!PHONE_NUMBER || PHONE_NUMBER === "24177000000") {
+            console.log(chalk.red('\n[ERREUR] N\'oublie pas de remplacer PHONE_NUMBER par ton vrai numéro dans index.js !\n'));
+        } else {
+            setTimeout(async () => {
+                let code = await sock.requestPairingCode(PHONE_NUMBER.trim());
+                code = code?.match(/.{1,4}/g)?.join("-") || code;
+                console.log(chalk.black.bgGreen(`\n========================================`));
+                console.log(chalk.black.bgGreen(` VOTRE CODE DE CONNEXION : ${code} `));
+                console.log(chalk.black.bgGreen(`========================================\n`));
+            }, 3000);
+        }
     }
 
     customStore.bind(sock.ev);
