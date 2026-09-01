@@ -1,7 +1,8 @@
-FROM node:18-slim
+FROM node:20-slim
 
-# Installation des paquets système indispensables
+# Installation de git et ffmpeg dans l'image
 RUN apt-get update && apt-get install -y \
+    git \
     ffmpeg \
     python3 \
     make \
@@ -11,7 +12,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install --production
+RUN npm install
 
 COPY . .
 
