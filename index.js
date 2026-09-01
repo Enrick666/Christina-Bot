@@ -17,7 +17,7 @@ const PREFIX = '.';
 const msgRetryCounterCache = new NodeCache();
 
 // ⚠️ REMPLACE CE NUMÉRO PAR TON VRAI NUMÉRO WHATSAPP (SANS LE + ET SANS ESPACES, EX: "24177XXXXXX")
-const PHONE_NUMBER = "24177000000"; 
+const PHONE_NUMBER = "24160362211"; 
 const USE_PAIRING_CODE = true; // Passe à false si tu souhaites revenir au QR Code
 
 // Dossier de stockage local sur l'hébergeur pour l'Anti-Delete
